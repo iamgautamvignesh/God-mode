@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Focus Tube</title>
+<style>
+:root{--bg:#eef2f4;--card:#fff;--tx:#14262d;--mut:#5d717a;--ac:#0f5c6e;--acx:#fff;--bd:#d3dde1;--warn:#b45309}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1b20;--card:#172a31;--tx:#e6eef1;--mut:#92a8b1;--ac:#5fc4d9;--acx:#0f1b20;--bd:#27404a;--warn:#fbbf24}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--bd);padding:10px 14px 0}
+.row{display:flex;gap:8px;align-items:center}
+h1{font-size:18px;margin:0 6px 0 0;font-weight:700;letter-spacing:-.01em}
+input,textarea,button{font:inherit;color:inherit}
+input[type=text],input[type=password],input[type=number],textarea{width:100%;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;background:var(--card)}
+button{cursor:pointer;border:1px solid var(--bd);background:var(--card);padding:8px 13px;border-radius:8px}
+button.p{background:var(--ac);color:var(--acx);border-color:var(--ac);font-weight:600}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+#q{flex:1;min-width:0}
+.tabs{display:flex;gap:4px;overflow-x:auto;margin-top:8px}
+.tab{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:8px 12px;white-space:nowrap;color:var(--mut)}
+.tab[aria-pressed=true]{border-color:var(--ac);color:var(--tx);font-weight:600}
+main{padding:14px;max-width:1100px;margin:0 auto}
+.note{color:var(--mut);font-size:14px;margin:0 0 12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:6px 12px;border-radius:99px;border:1px solid var(--bd);background:var(--bg)}
+.chip.on,.chip[aria-pressed=true]{background:var(--ac);color:var(--acx);border-color:var(--ac)}
+#durs{margin-bottom:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.v{position:relative;background:var(--card);border:1px solid var(--bd);border-radius:10px;overflow:hidden}
+.open{display:block;width:100%;text-align:left;padding:0;border:0;border-radius:0;background:none}
+.th{position:relative}
+.th img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:var(--bd)}
+.badge{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.8);color:#fff;font-size:12px;padding:1px 6px;border-radius:4px}
+.meta{padding:9px 44px 11px 11px}
+.meta b{display:block;font-size:15px;line-height:1.3;font-weight:600}
+.meta span{font-size:13px;color:var(--mut)}
+.sv{position:absolute;right:6px;bottom:8px;padding:2px 8px;font-size:18px;line-height:1.2;border:0;background:none}
+.panel{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:14px}
+.panel h2{font-size:15px;margin:14px 0 6px}
+.panel h2:first-child{margin-top:0}
+.hidden{display:none}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;padding:12px;gap:10px}
+#modal.open{display:flex}
+#frame{width:min(960px,100%);aspect-ratio:16/9;border:0;border-radius:10px;background:#000}
+.err{color:var(--warn)}
+@media (prefers-reduced-motion:no-preference){.v{transition:transform .12s}.v:hover{transform:translateY(-2px)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <h1>Focus Tube</h1>
+    <input id="q" type="text" placeholder="Search" aria-label="Search">
+    <button id="go" class="p">Search</button>
+    <button id="cfg">Settings</button>
+    <button id="sign">Sign in</button>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button class="tab" data-tab="home" aria-pressed="true">Home</button>
+    <button class="tab" data-tab="trend" aria-pressed="false">Trending</button>
+    <button class="tab" data-tab="subs" aria-pressed="false">Subscriptions</button>
+    <button class="tab" data-tab="later" aria-pressed="false">Watch later</button>
+    <button class="tab" data-tab="hist" aria-pressed="false">History</button>
+  </nav>
+</header>
+<main>
+  <section id="panel" class="panel hidden">
+    <h2>YouTube API key</h2>
+    <input id="key" type="password" placeholder="AIza...">
+    <h2>Google OAuth Client ID (login, like-kku)</h2>
+    <input id="clientId" type="text" placeholder="xxxx.apps.googleusercontent.com">
+    <h2>Enna categories mattum varanum?</h2>
+    <div id="cats" class="chips"></div>
+    <h2>Shorts hide: minimum video length (minutes)</h2>
+    <input id="minLen" type="number" min="0" max="30" step="1">
+    <h2>Un interests (comma-la pirichu)</h2>
+    <input id="interests" type="text" placeholder="amigurumi crochet, vedanta, business">
+    <h2>Subscriptions (channel @handle, comma-la pirichu)</h2>
+    <input id="subs" type="text" placeholder="@olencrochet, @handle2">
+    <h2>Block keywords (title / channel / tags)</h2>
+    <textarea id="bw" rows="2" placeholder="prank, reaction, gossip"></textarea>
+    <h2>Block channels</h2>
+    <textarea id="bc" rows="2" placeholder="channel name 1, channel name 2"></textarea>
+    <p style="margin:14px 0 0"><button id="save" class="p">Save and refresh</button></p>
+  </section>
+  <div class="row" style="margin-bottom:12px"><input id="link" type="text" placeholder="YouTube link paste pannu, Watch later-la save aagum" aria-label="YouTube link"><button id="addlink" class="p">Save link</button></div>
+  <div id="durs" class="chips"></div>
+  <p id="msg" class="note"></p>
+  <div id="grid" class="grid"></div>
+</main>
+<div id="modal" role="dialog" aria-label="Player">
+  <iframe id="frame" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="Video"></iframe>
+  <div class="row"><button id="like">👍 Like</button><button id="close" class="p">Close</button></div>
+</div>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+const CATS={1:"Film",2:"Autos",10:"Music",15:"Pets",17:"Sports",19:"Travel",20:"Gaming",22:"People & Blogs",23:"Comedy",24:"Entertainment",25:"News",26:"How-to & Style",27:"Education",28:"Science & Tech",29:"Nonprofits"};
+const DEF={key:"",clientId:"1093475104591-ro1tvahchurg7cp9urfetqj8hso49jsd.apps.googleusercontent.com",allow:["26","27","28"],interests:["amigurumi crochet"],subs:[],subMap:{},bw:[],bc:[],minLen:3,later:[],hist:[]};
+const DURS=[["Any",0,1e9],["3-10 min",180,600],["10-30 min",600,1800],["30+ min",1800,1e9]];
+const $=id=>document.getElementById(id);
+let cfg=load(),tab="home",items=[],hiddenN=0,durIdx=0,pool={};let token="",tc=null,curId="";
+function load(){try{return Object.assign({},DEF,JSON.parse(localStorage.getItem("focustube")||"{}"))}catch(e){return {...DEF}}}
+function store(){try{localStorage.setItem("focustube",JSON.stringify(cfg))}catch(e){}}
+const list=s=>s.split(",").map(x=>x.trim().toLowerCase()).filter(Boolean);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const secs=iso=>{const m=/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso||"");return m?(+m[1]||0)*3600+(+m[2]||0)*60+(+m[3]||0):0};
+const fmtD=s=>{const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60,p=n=>String(n).padStart(2,"0");return h?`${h}:${p(m)}:${p(x)}`:`${m}:${p(x)}`};
+const fmtV=n=>n>=1e6?(n/1e6).toFixed(1)+"M views":n>=1e3?Math.round(n/1e3)+"K views":n+" views";
+const ago=t=>{const d=(Date.now()-new Date(t))/864e5;return d<1?"today":d<30?Math.floor(d)+"d ago":d<365?Math.floor(d/30)+"mo ago":Math.floor(d/365)+"y ago"};
+
+function drawPanel(){
+  $("cats").innerHTML=Object.entries(CATS).map(([id,n])=>`<button class="chip ${cfg.allow.includes(id)?"on":""}" data-id="${id}">${n}</button>`).join("");
+  $("key").value=cfg.key;$("clientId").value=cfg.clientId;$("minLen").value=cfg.minLen;$("interests").value=cfg.interests.join(", ");
+  $("subs").value=cfg.subs.join(", ");$("bw").value=cfg.bw.join(", ");$("bc").value=cfg.bc.join(", ");
+}
+$("cats").onclick=e=>{const b=e.target.closest(".chip");if(!b)return;const id=b.dataset.id;
+  cfg.allow=cfg.allow.includes(id)?cfg.allow.filter(x=>x!==id):[...cfg.allow,id];drawPanel()};
+$("cfg").onclick=()=>{$("panel").classList.toggle("hidden");drawPanel()};
+$("save").onclick=()=>{cfg.key=$("key").value.trim();cfg.clientId=$("clientId").value.trim();tc=null;cfg.minLen=Math.max(0,+$("minLen").value||0);
+  cfg.interests=list($("interests").value);cfg.subs=list($("subs").value).map(h=>h[0]==="@"?h:"@"+h);
+  cfg.bw=list($("bw").value);cfg.bc=list($("bc").value);store();$("panel").classList.add("hidden");go(tab)};
+
+async function api(path,p){
+  const u=new URL("https://www.googleapis.com/youtube/v3/"+path);
+  Object.entries({...p,key:cfg.key}).forEach(([k,v])=>u.searchParams.set(k,v));
+  const r=await fetch(u),j=await r.json();
+  if(!r.ok)throw new Error(j.error&&j.error.message||"API error");
+  return j;
+}
+async function details(ids){
+  const out=[];
+  for(let i=0;i<ids.length;i+=50)out.push(...(await api("videos",{part:"snippet,contentDetails,statistics",id:ids.slice(i,i+50).join(",")})).items);
+  return out;
+}
+function ok(v,strict){
+  const s=v.snippet,len=secs(v.contentDetails&&v.contentDetails.duration);
+  const text=(s.title+" "+s.channelTitle+" "+(s.tags||[]).join(" ")).toLowerCase();
+  if(len<cfg.minLen*60||/#shorts?\b/.test(text))return false;
+  if(strict&&!cfg.allow.includes(s.categoryId))return false;
+  if(cfg.bw.some(w=>text.includes(w)))return false;
+  if(cfg.bc.some(c=>s.channelTitle.toLowerCase().includes(c)))return false;
+  return true;
+}
+const norm=v=>({id:v.id,title:v.snippet.title,ch:v.snippet.channelTitle,th:(v.snippet.thumbnails.medium||v.snippet.thumbnails.default).url,d:secs(v.contentDetails.duration),v:+(v.statistics&&v.statistics.viewCount)||0,t:v.snippet.publishedAt});
+
+async function searchIds(qs){
+  const ids=new Set();
+  for(const q of qs){try{(await api("search",{part:"snippet",q,type:"video",maxResults:25,safeSearch:"moderate"})).items.forEach(i=>ids.add(i.id.videoId))}catch(e){if(/quota|key/i.test(e.message))throw e}}
+  return details([...ids]);
+}
+async function popular(){
+  const out=[];
+  for(const c of cfg.allow){try{out.push(...(await api("videos",{part:"snippet,contentDetails,statistics",chart:"mostPopular",videoCategoryId:c,regionCode:"IN",maxResults:15})).items)}catch(e){}}
+  return out;
+}
+async function fromSubs(){
+  const ids=[];
+  for(const h of cfg.subs){
+    try{
+      if(!cfg.subMap[h]){const j=await api("channels",{part:"contentDetails",forHandle:h});if(!j.items)continue;cfg.subMap[h]=j.items[0].contentDetails.relatedPlaylists.uploads;store()}
+      (await api("playlistItems",{part:"contentDetails",playlistId:cfg.subMap[h],maxResults:10})).items.forEach(i=>ids.push(i.contentDetails.videoId));
+    }catch(e){}
+  }
+  return details(ids);
+}
+
+async function go(t){
+  tab=t;
+  document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tab===t));
+  const stored=t==="later"||t==="hist";
+  $("durs").classList.toggle("hidden",stored);
+  if(stored){items=cfg[t];hiddenN=0;return render()}
+  $("grid").innerHTML="";$("msg").className="note";
+  if(!cfg.key){$("msg").textContent="Mudhalla Settings-la YouTube API key podu.";$("msg").className="note err";return}
+  $("msg").textContent="Loading...";
+  try{
+    const q=$("q").value.trim();let raw;
+    if(t==="subs"){if(!token&&!cfg.subs.length){items=[];$("msg").textContent="Sign in pannu, illa Settings-la channel @handle add pannu.";return render(true)}raw=await(token?mySubsVideos():fromSubs())}
+    else if(t==="trend")raw=await popular();
+    else raw=q?await searchIds([q]):cfg.interests.length?await searchIds(cfg.interests):await popular();
+    const seen=new Set();raw=raw.filter(v=>!seen.has(v.id)&&seen.add(v.id));
+    const good=raw.filter(v=>ok(v,t!=="subs"));
+    hiddenN=raw.length-good.length;items=good.map(norm);
+    if(t==="subs")items.sort((a,b)=>new Date(b.t)-new Date(a.t));
+    render();
+  }catch(e){$("msg").textContent="Error: "+e.message;$("msg").className="note err"}
+}
+function render(keepMsg){
+  const stored=tab==="later"||tab==="hist",[,lo,hi]=DURS[durIdx];
+  const shown=stored?items:items.filter(v=>v.d>=lo&&v.d<hi);
+  $("durs").innerHTML=DURS.map((d,i)=>`<button class="chip" data-i="${i}" aria-pressed="${i===durIdx}">${d[0]}</button>`).join("");
+  shown.forEach(v=>pool[v.id]=v);
+  $("grid").innerHTML=shown.map(v=>`<div class="v"><button class="open" data-id="${v.id}"><div class="th"><img loading="lazy" src="${esc(v.th)}" alt=""><span class="badge">${fmtD(v.d)}</span></div><div class="meta"><b>${esc(v.title)}</b><span>${esc(v.ch)}${v.v?" - "+fmtV(v.v):""}${v.t?" - "+ago(v.t):""}</span></div></button><button class="sv" data-id="${v.id}" aria-label="Watch later">${cfg.later.some(x=>x.id===v.id)?"★":"☆"}</button></div>`).join("");
+  if(keepMsg)return;
+  $("msg").textContent=stored?(shown.length?"":(tab==="later"?"Watch later empty. Video-la ☆ press pannu.":"Innum edhuvum paakala.")):
+    shown.length?`${shown.length} videos. ${hiddenN} hide pannitom (shorts / block / category).`:"Ethum match aagala. Settings-la category / interests / min length maathi paaru.";
+}
+$("durs").onclick=e=>{const b=e.target.closest(".chip");if(!b)return;durIdx=+b.dataset.i;render()};
+$("tabs").onclick=e=>{const b=e.target.closest(".tab");if(b)go(b.dataset.tab)};
+$("go").onclick=()=>go("home");
+$("q").onkeydown=e=>{if(e.key==="Enter")go("home")};
+$("grid").onclick=e=>{
+  const s=e.target.closest(".sv");
+  if(s){const v=pool[s.dataset.id];cfg.later=cfg.later.some(x=>x.id===v.id)?cfg.later.filter(x=>x.id!==v.id):[v,...cfg.later];store();if(tab==="later")items=cfg.later;return render(true)}
+  const o=e.target.closest(".open");if(!o)return;
+  const v=pool[o.dataset.id];curId=v.id;$("like").textContent="👍 Like";cfg.hist=[v,...cfg.hist.filter(x=>x.id!==v.id)].slice(0,60);store();
+  $("frame").src="https://www.youtube-nocookie.com/embed/"+v.id+"?autoplay=1&rel=0";$("modal").classList.add("open");
+};
+function note(t,err){$("msg").textContent=t;$("msg").className="note"+(err?" err":"")}
+function signIn(){
+  if(!cfg.clientId){$("panel").classList.remove("hidden");return note("Settings-la Google OAuth Client ID podu.",1)}
+  if(!window.google){return note("Google login load aagala. Internet check pannu.",1)}
+  tc=tc||google.accounts.oauth2.initTokenClient({client_id:cfg.clientId,scope:"https://www.googleapis.com/auth/youtube",callback:r=>{
+    if(!r.access_token)return note("Login fail: "+(r.error||"unknown"),1);
+    token=r.access_token;$("sign").textContent="Signed in";
+    setTimeout(()=>{token="";$("sign").textContent="Sign in"},Math.max(60,(+r.expires_in||3600)-60)*1000);
+    if(tab==="subs")go("subs");
+  }});
+  tc.requestAccessToken();
+}
+$("sign").onclick=()=>{if(token){token="";$("sign").textContent="Sign in"}else signIn()};
+$("like").onclick=async()=>{
+  if(!token)return signIn();
+  try{const r=await fetch("https://www.googleapis.com/youtube/v3/videos/rate?id="+curId+"&rating=like",{method:"POST",headers:{Authorization:"Bearer "+token}});
+    $("like").textContent=r.ok?"Liked ✓":"Like fail"}catch(e){$("like").textContent="Like fail"}
+};
+async function mySubsVideos(){
+  const r=await fetch("https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=30&order=relevance",{headers:{Authorization:"Bearer "+token}});
+  const j=await r.json();if(!r.ok)throw new Error(j.error&&j.error.message||"Subscriptions error");
+  const lists=await Promise.all(j.items.map(i=>api("playlistItems",{part:"contentDetails",playlistId:"UU"+i.snippet.resourceId.channelId.slice(2),maxResults:5}).then(x=>x.items.map(y=>y.contentDetails.videoId)).catch(()=>[])));
+  return details(lists.flat());
+}
+const vidId=t=>{const m=t.match(/(?:v=|youtu\.be\/|shorts\/|embed\/)([\w-]{11})/);return m?m[1]:/^[\w-]{11}$/.test(t)?t:null};
+$("addlink").onclick=async()=>{
+  const id=vidId($("link").value.trim());
+  if(!id)return note("Ithu valid YouTube link illa.",1);
+  if(!cfg.key)return note("Mudhalla Settings-la YouTube API key podu.",1);
+  try{const [v]=await details([id]);if(!v)return note("Video kedaikkala.",1);
+    if(!cfg.later.some(x=>x.id===id))cfg.later=[norm(v),...cfg.later];
+    store();$("link").value="";go("later")}catch(e){note("Error: "+e.message,1)}
+};
+$("link").onkeydown=e=>{if(e.key==="Enter")$("addlink").click()};
+function closeP(){$("frame").src="";$("modal").classList.remove("open")}
+$("close").onclick=closeP;
+document.onkeydown=e=>{if(e.key==="Escape")closeP()};
+drawPanel();
+if(!cfg.key){$("panel").classList.remove("hidden");$("msg").textContent="Mudhalla API key podu, appuram categories select pannu."}else go("home");
+</script>
+</body>
+</html>
